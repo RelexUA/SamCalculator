@@ -1,4 +1,4 @@
-SamCalculator 🧮✨
+SamCalculator
 
 A simple and flexible Windows calculator with Samsung One UI design and functionality.
 
