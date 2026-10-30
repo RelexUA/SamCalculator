@@ -11,7 +11,7 @@ Features:
 
 Download & Installation:
 1. Open the Releases section.
-2. Download SamsungCalculator_Setup.exe.
+2. Download SamCalculator_Setup.exe.
 3. Run the setup and follow the instructions.
 
 License:
