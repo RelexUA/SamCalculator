@@ -1,6 +1,6 @@
 # Samsung-style Calculator
 
-A desktop calculator for Windows styled after Samsung Calculator, featuring dark and light themes, a scientific mode, a converter, history with notes, and custom backgrounds. Built with Python (pywebview) using a single HTML file for the interface, it works completely offline and sends nothing to the internet.
+Fully vibe-coded desktop calculator for Windows created using Gemini and Claude without subscriptions, styled after Samsung Calculator, featuring dark and light themes, a scientific mode, a converter, history with notes, and custom backgrounds. Built with Python (pywebview) using a single HTML file for the interface, it works completely offline and sends nothing to the internet.
 
 ## Features
 
@@ -98,4 +98,7 @@ AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
 LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
-Co-Authored-By: Claude <noreply@anthropic.com>
+
+## Credits
+
+Created with AI assistance (Gemini & Claude).
