@@ -101,4 +101,4 @@ SOFTWARE.
 
 ## Credits
 
-Created with AI assistance (Gemini & Claude).
+Created with the help of Gemini and Claude. Special thanks for assistance to Larga https://github.com/Argosha
