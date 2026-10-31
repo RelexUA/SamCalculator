@@ -1281,6 +1281,11 @@
         .calculator.btn-glass .sci-btn:not(.active):hover {
             background-color: color-mix(in srgb, var(--hover-func) var(--btn-pct), transparent);
         }
+
+        /* Android-приложение: окно всегда вертикальное, "поверх всех окон" не нужно */
+        html.android #mode-toggle,
+        html.android #conv-mode-toggle,
+        html.android .switch-row.desktop-only { display: none !important; }
     </style>
 </head>
 <body>
@@ -1533,7 +1538,7 @@
                 <div class="set-label" style="margin: 10px 0 0 0; font-size: 12px;" data-i18n="bg_hint">Можно перетащить картинку прямо в окно</div>
                 <input type="file" id="bg-file" accept="image/*" hidden>
             </div>
-            <div class="set-group switch-row">
+            <div class="set-group switch-row desktop-only">
                 <span data-i18n="on_top">Поверх всех окон</span>
                 <button class="toggle" id="set-ontop" role="switch" aria-checked="false"><i></i></button>
             </div>
@@ -1591,7 +1596,7 @@
 
     const DEFAULTS = { lang: "ru", theme: "dark", accent: "#7928ca", bg: null, dim: 35, panelT: 35, btnT: 0, onTop: false, sci: false, deg: true };
     const SWATCHES = ["#7928ca", "#2f6fed", "#0fa3a3", "#2ea84f", "#e8891a", "#e0467c", "#d9382f"];
-    const STORE_KEY = "samsungcalc.settings";
+    const STORE_KEY = "samcalc.settings";
     let settings = Object.assign({}, DEFAULTS);
 
     // tr - перевод по ключу, fmt - число с запятой (ru) или точкой (en)
@@ -1641,6 +1646,9 @@
             }
         } catch (err) {}
     }
+
+    // Внутри Android-приложения (обёртка WebView) помечаем страницу
+    if (typeof navigator !== "undefined" && /SamCalcApp/.test(navigator.userAgent)) document.documentElement.classList.add("android");
 
     function syncWindowSize() {
         callApi("set_window_size", calcEl.classList.contains("horizontal") ? "horizontal" : "vertical", !!settings.sci);
@@ -2332,7 +2340,7 @@
     }
 
     // История хранится в файле (через Python) и в localStorage при запуске в браузере
-    const HISTORY_KEY = "samsungcalc.history";
+    const HISTORY_KEY = "samcalc.history";
 
     function saveHistory() {
         const txt = JSON.stringify(calcHistory);
