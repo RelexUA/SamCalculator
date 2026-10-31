@@ -47,7 +47,7 @@ You can delete these files to reset the app. Error logs (`calculator_error.log` 
 
 ## Installation for Users
 
-Download the installer or `SamsungCalculator.exe` from the **Releases** section. No Python or external libraries required: everything is bundled inside.
+Download the installer SamCalculator_Setup.exe from the **Releases** section. No Python or external libraries required: everything is bundled inside.
 
 Requires **Windows 10 or 11** and **Microsoft Edge WebView2 Runtime**. It is pre-installed on Windows 11 and modern Windows 10 builds. If the window fails to open, install it from the Microsoft website.
 
@@ -57,9 +57,9 @@ Requires Python 3.9+ and Windows.
 
 ```bat
 pip install pywebview pyinstaller
-pyinstaller --noconsole --onefile --clean --icon favicon.ico ^
-  --add-data "samsungcalculator.html;." --add-data "favicon.ico;." ^
-  --name SamsungCalculator app.py
+pyinstaller --noconsole --onedir --clean --icon favicon.ico ^
+  --add-data "samscalculator.html;." --add-data "favicon.ico;." ^
+  --name SamsCalculator app.py
 ```
 
 Alternatively, simply run `build.bat`. The compiled executable will appear in the `dist` folder.
@@ -71,7 +71,7 @@ To run without building: `python app.py`.
 | File | Purpose |
 |---|---|
 | `app.py` | Window management, data persistence, always-on-top toggle, icon |
-| `samsungcalculator.html` | Complete interface and calculation logic |
+| `samscalculator.html` | Complete interface and calculation logic |
 | `favicon.ico` | Application icon |
 | `build.bat` | Exe build script |
 
@@ -79,7 +79,7 @@ To run without building: `python app.py`.
 
 MIT License
 
-Copyright (c) 2026
+Copyright (c) 2026 RelexUA
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
