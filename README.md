@@ -1,4 +1,4 @@
-# Samsung-style Calculator
+# One UI-style Calculator
 
 Fully vibe-coded desktop calculator for Windows created using Gemini and Claude without subscriptions, styled after Samsung Calculator, featuring dark and light themes, a scientific mode, a converter, history with notes, and custom backgrounds. Built with Python (pywebview) using a single HTML file for the interface, it works completely offline and sends nothing to the internet.
 
