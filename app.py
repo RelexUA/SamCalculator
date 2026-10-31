@@ -10,7 +10,7 @@ from multiprocessing import freeze_support
 
 import webview
 
-WINDOW_TITLE = "Samsung Calculator"
+WINDOW_TITLE = "SamCalculator"
 
 # Размеры окна: (режим, научный) -> (ширина, высота)
 WINDOW_SIZES = {
