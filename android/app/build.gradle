@@ -10,13 +10,29 @@ android {
         applicationId "com.example.samcalculator"
         minSdk 24
         targetSdk 34
-        versionCode 1
-        versionName "1.0.0"
+        // Номер сборки растёт сам (нужен телефону, чтобы принимать обновления)
+        versionCode Integer.parseInt(System.getenv("GITHUB_RUN_NUMBER") ?: "1")
+        versionName System.getenv("APP_VERSION") ?: "1.0.0"
+    }
+
+    signingConfigs {
+        release {
+            // Постоянный ключ подписи приходит из секретов GitHub (см. android.yml)
+            def ks = System.getenv("KEYSTORE_FILE")
+            if (ks) {
+                storeFile file(ks)
+                storePassword System.getenv("KEYSTORE_PASSWORD")
+                keyAlias System.getenv("KEY_ALIAS")
+                keyPassword System.getenv("KEY_PASSWORD")
+            }
+        }
     }
 
     buildTypes {
         release {
             minifyEnabled false
+            // Нет секретов - собирается с отладочной подписью, чтобы сборка не ломалась
+            signingConfig System.getenv("KEYSTORE_FILE") ? signingConfigs.release : signingConfigs.debug
         }
     }
 

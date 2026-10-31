@@ -4,6 +4,7 @@ import android.app.Activity;
 import android.content.Intent;
 import android.net.Uri;
 import android.os.Bundle;
+import android.view.View;
 import android.webkit.ValueCallback;
 import android.webkit.WebChromeClient;
 import android.webkit.WebSettings;
@@ -26,6 +27,7 @@ public class MainActivity extends Activity {
 
         webView = new WebView(this);
         webView.setBackgroundColor(0xFF000000);
+        webView.setOverScrollMode(View.OVER_SCROLL_NEVER);
         setContentView(webView);
 
         WebSettings s = webView.getSettings();
@@ -81,6 +83,18 @@ public class MainActivity extends Activity {
             return;
         }
         super.onActivityResult(requestCode, resultCode, data);
+    }
+
+    // «Назад» сначала закрывает открытую панель (история, настройки, конвертер), и только потом выходит
+    @Override
+    public void onBackPressed() {
+        webView.evaluateJavascript(
+                "(window.androidBack && window.androidBack()) === true",
+                value -> {
+                    if (!"true".equals(value)) {
+                        finish();
+                    }
+                });
     }
 
     @Override
