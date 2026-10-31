@@ -1286,6 +1286,88 @@
         html.android #mode-toggle,
         html.android #conv-mode-toggle,
         html.android .switch-row.desktop-only { display: none !important; }
+
+        /* Плавность на телефоне: размытие фона под выезжающими панелями сильно
+           нагружает видеочип, без него анимации идут заметно ровнее */
+        html.android *,
+        html.android *::before,
+        html.android *::after {
+            -webkit-backdrop-filter: none !important;
+            backdrop-filter: none !important;
+        }
+        html.android .history-panel,
+        html.android .converter-panel,
+        html.android .settings-panel { will-change: transform; }
+
+        /* Поле заметки: окно приложения сжимается над клавиатурой, поле всегда на виду */
+        .note-sheet {
+            position: fixed;
+            left: 0; right: 0; top: 0; bottom: 0;
+            z-index: 100;
+            display: none;
+            align-items: flex-end;
+            background: rgba(0, 0, 0, 0.45);
+        }
+        .note-sheet.open { display: flex; }
+        .note-sheet-box {
+            width: 100%;
+            padding: 12px 14px calc(12px + var(--sab));
+            background: var(--bg-color);
+            border-top: 1px solid var(--line-strong);
+            color: var(--text);
+        }
+        .note-sheet-expr {
+            font-size: 14px;
+            opacity: 0.7;
+            margin-bottom: 8px;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+        .note-sheet-row { display: flex; gap: 8px; align-items: center; }
+        .note-sheet-row input {
+            flex: 1;
+            min-width: 0;
+            background: var(--btn-func-bg);
+            color: var(--text);
+            border: 1px solid var(--accent-color);
+            border-radius: 10px;
+            padding: 11px 12px;
+            font-size: 16px;
+            outline: none;
+            user-select: text;
+            -webkit-user-select: text;
+        }
+        .note-sheet-row button {
+            border: none;
+            border-radius: 10px;
+            padding: 0 16px;
+            height: 44px;
+            font-size: 20px;
+            background: var(--accent-color);
+            color: var(--on-accent, #fff);
+        }
+
+        /* Низкие экраны (телефон набок): всё чуть компактнее, чтобы нижний ряд кнопок
+           не обрезался. Десктопное окно (высота от 450) под это правило не попадает. */
+        @media (max-height: 440px) and (orientation: landscape) {
+            .calculator.horizontal {
+                --bs: max(34px, min(80px, calc((var(--vh) - 138px - var(--sab) - var(--sat)) / 5), calc((100vw - 330px - var(--sal) - var(--sar)) / 4)));
+                padding-top: calc(6px + var(--sat));
+                padding-bottom: calc(6px + var(--sab));
+                grid-template-rows: 28px 70px 1fr;
+                row-gap: 2px;
+            }
+            .calculator.horizontal.sci-on {
+                --bs: max(34px, min(80px, calc((var(--vh) - 138px - var(--sab) - var(--sat)) / 5), calc((100vw - 350px - var(--sal) - var(--sar)) / 7)));
+            }
+            .calculator.horizontal .display { height: 70px; }
+            .calculator.horizontal .history-expr { font-size: 12px; min-height: 14px; }
+            .calculator.horizontal .current-input { font-size: 26px; }
+            .calculator.horizontal .preview { font-size: 12px; min-height: 14px; margin-top: 0; }
+            .calculator.horizontal .keypad,
+            .calculator.horizontal.sci-on > .sci-panel { gap: 6px; }
+        }
     </style>
 </head>
 <body>
@@ -1547,6 +1629,16 @@
     </div>
 
     <div class="toast" id="toast"></div>
+</div>
+
+<div class="note-sheet" id="note-sheet">
+    <div class="note-sheet-box">
+        <div class="note-sheet-expr" id="note-sheet-expr"></div>
+        <div class="note-sheet-row">
+            <input type="text" id="note-sheet-input" maxlength="80" enterkeyhint="done" autocomplete="off">
+            <button type="button" id="note-sheet-ok">✓</button>
+        </div>
+    </div>
 </div>
 
 <script>
@@ -2292,7 +2384,44 @@
     }
 
     // Заметка к записи: поле ввода появляется прямо в истории
+    // На телефоне поле ввода показывается отдельной строкой над клавиатурой
+    let noteSheetOpen = false;
+    function openNoteSheet(i) {
+        const it = calcHistory[i];
+        if (!it) return;
+        const sheet = document.getElementById("note-sheet");
+        const input = document.getElementById("note-sheet-input");
+        document.getElementById("note-sheet-expr").textContent = fmt(it.expr) + " = " + fmt(it.res);
+        input.value = it.note || "";
+        input.placeholder = tr("note_placeholder");
+        noteSheetOpen = true;
+        sheet.classList.add("open");
+        input.focus();
+        let done = false;
+        function finish(save) {
+            if (done) return;
+            done = true;
+            if (save) {
+                it.note = input.value.trim();
+                saveHistory();
+            }
+            sheet.classList.remove("open");
+            input.blur();
+            renderHistory();
+            // размер страницы пересчитаем, когда клавиатура уберётся
+            setTimeout(function () { noteSheetOpen = false; if (window.refreshVh) window.refreshVh(); }, 400);
+        }
+        input.onkeydown = function (ev) {
+            ev.stopPropagation();
+            if (ev.key === "Enter") finish(true);
+            else if (ev.key === "Escape") finish(false);
+        };
+        document.getElementById("note-sheet-ok").onclick = function () { finish(true); };
+        sheet.onclick = function (ev) { if (ev.target === sheet) finish(true); };
+    }
+
     function editNote(i) {
+        if (document.documentElement.classList && document.documentElement.classList.contains("android")) { openNoteSheet(i); return; }
         const it = calcHistory[i];
         if (!it) return;
         const items = Array.prototype.filter.call(document.querySelectorAll('.history-item[data-i="' + i + '"]'), function (el) {
@@ -3060,16 +3189,38 @@
 
     window.addEventListener("resize", fitDisplay);
 
-    // Старые браузеры без dvh: высота видимой области берётся из window.innerHeight
-    if (!(window.CSS && CSS.supports && CSS.supports("height", "100dvh"))) {
-        const setVh = function () {
+    // Высота видимой области берётся из window.innerHeight: в старых браузерах без dvh
+    // и в Android-приложении. Пока открыто поле заметки, высота не пересчитывается,
+    // иначе калькулятор сжимался бы вместе с окном при появлении клавиатуры.
+    const isAndroidApp = !!(document.documentElement.classList && document.documentElement.classList.contains("android"));
+    if (isAndroidApp || !(window.CSS && CSS.supports && CSS.supports("height", "100dvh"))) {
+        window.refreshVh = function () {
+            if (typeof noteSheetOpen !== "undefined" && noteSheetOpen) return;
             if (window.innerHeight) document.documentElement.style.setProperty("--vh", window.innerHeight + "px");
         };
-        setVh();
-        window.addEventListener("resize", setVh);
+        window.refreshVh();
+        window.addEventListener("resize", window.refreshVh);
+    }
+
+    // Android: горизонтальный режим включается сам, когда телефон повёрнут набок
+    function isLandscape() {
+        try {
+            if (screen.orientation && screen.orientation.type) return screen.orientation.type.indexOf("landscape") === 0;
+        } catch (e) {}
+        return window.innerWidth > window.innerHeight;
+    }
+    function autoOrient() {
+        if (!isAndroidApp) return;
+        const want = isLandscape() ? "horizontal" : "vertical";
+        if (!calcEl.classList.contains(want)) toggleAppMode();
+    }
+    if (isAndroidApp) {
+        window.addEventListener("resize", function () { setTimeout(autoOrient, 60); });
+        window.addEventListener("orientationchange", function () { setTimeout(autoOrient, 120); });
     }
 
     // ====== Старт ======
+    autoOrient();
     setupSettingsUI();
     setupDatesUI();
     document.getElementById("sci-toggle").onclick = toggleSci;
