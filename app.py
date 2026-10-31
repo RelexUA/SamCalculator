@@ -23,7 +23,7 @@ WINDOW_SIZES = {
 
 # ---------------------------------------------------------------- вспомогательное
 def resource_path(name):
-    """Путь к файлу и при обычном запуске, и внутри собранного exe (--onefile)."""
+    """Путь к файлу и при обычном запуске, и внутри собранного exe (--onedir)."""
     base = getattr(sys, "_MEIPASS", os.path.dirname(os.path.abspath(__file__)))
     return os.path.join(base, name)
 
@@ -82,9 +82,9 @@ _FILE_LOCK = threading.Lock()
 
 
 def data_path(name):
-    """Файлы с данными (настройки, история) лежат в %APPDATA%\\SamsungCalculator."""
+    """Файлы с данными (настройки, история) лежат в %APPDATA%\\SamCalculator."""
     base = os.environ.get("APPDATA") or os.path.expanduser("~")
-    return os.path.join(base, "SamsungCalculator", name)
+    return os.path.join(base, "SamCalculator", name)
 
 
 def read_text(name):
@@ -302,12 +302,12 @@ class CalculatorAPI:
 def main():
     reset_debug_log()
     trace("start")
-    html_path = resource_path("samsungcalculator.html")
+    html_path = resource_path("samcalculator.html")
     if not os.path.exists(html_path):
         message = (
-            "Не найден файл samsungcalculator.html.\n\n"
+            "Не найден файл samcalculator.html.\n\n"
             "Соберите exe с параметром:\n"
-            '--add-data "samsungcalculator.html;."'
+            '--add-data "samcalculator.html;."'
         )
         log_error(message)
         show_message(message)
@@ -316,7 +316,7 @@ def main():
     # Для каждого запуска отдельная временная папка браузерного движка.
     # Если прошлый запуск закрылся некорректно и оставил свою папку «занятой»,
     # новый запуск не будет об неё спотыкаться и зависать.
-    storage = tempfile.mkdtemp(prefix="samsungcalc_")
+    storage = tempfile.mkdtemp(prefix="samgcalc_")
 
     try:
         api = CalculatorAPI()
