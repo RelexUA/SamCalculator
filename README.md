@@ -47,7 +47,7 @@ You can delete these files to reset the app. Error logs (`calculator_error.log` 
 
 ## Installation for Users
 
-Download the installer SamCalculator_Setup.exe from the **Releases** section. No Python or external libraries required: everything is bundled inside.
+Download the installer SamCalculator1.1.exe for Windows 10/11 or SamCalculator.apk for Android from the **Releases** section. No Python or external libraries required: everything is bundled inside.
 
 Requires **Windows 10 or 11** and **Microsoft Edge WebView2 Runtime**. It is pre-installed on Windows 11 and modern Windows 10 builds. If the window fails to open, install it from the Microsoft website.
 
