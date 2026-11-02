@@ -1,7 +1,11 @@
 package com.example.samcalculator;
 
 import android.app.Activity;
+import android.content.ComponentName;
 import android.content.Intent;
+import android.content.SharedPreferences;
+import android.content.pm.PackageManager;
+import android.content.res.Configuration;
 import android.graphics.Color;
 import android.net.Uri;
 import android.os.Build;
@@ -107,12 +111,49 @@ public class MainActivity extends Activity {
         }
 
         @JavascriptInterface
+        public void setIconFollowsTheme(final boolean on) {
+            runOnUiThread(() -> {
+                getSharedPreferences("icon", MODE_PRIVATE).edit().putBoolean("follow", on).apply();
+                applyIcon();
+            });
+        }
+
+        @JavascriptInterface
         public void setLightBars(final boolean light) {
             runOnUiThread(() -> {
                 lightBars = light;
                 applyBars();
             });
         }
+    }
+
+    // Иконка приложения: тёмная по умолчанию. Если включено "по теме телефона" и у телефона
+    // светлая тема, включается вторая иконка. Приложение при этом не перезапускается.
+    // Сменить иконку можно только пока приложение открыто, поэтому проверка идёт при запуске
+    // и при смене темы, а лаунчер обновляет значок с небольшой задержкой.
+    private void applyIcon() {
+        boolean follow = getSharedPreferences("icon", MODE_PRIVATE).getBoolean("follow", false);
+        boolean night = (getResources().getConfiguration().uiMode & Configuration.UI_MODE_NIGHT_MASK)
+                == Configuration.UI_MODE_NIGHT_YES;
+        boolean light = follow && !night;
+        setAlias("com.example.samcalculator.IconLight", light);
+        setAlias("com.example.samcalculator.IconDark", !light);
+    }
+
+    private void setAlias(String name, boolean enable) {
+        PackageManager pm = getPackageManager();
+        ComponentName cn = new ComponentName(this, name);
+        int want = enable ? PackageManager.COMPONENT_ENABLED_STATE_ENABLED
+                          : PackageManager.COMPONENT_ENABLED_STATE_DISABLED;
+        if (pm.getComponentEnabledSetting(cn) != want) {
+            pm.setComponentEnabledSetting(cn, want, PackageManager.DONT_KILL_APP);
+        }
+    }
+
+    @Override
+    public void onConfigurationChanged(Configuration newConfig) {
+        super.onConfigurationChanged(newConfig);
+        applyIcon();
     }
 
     private void applyFullscreen(boolean on) {
@@ -256,12 +297,14 @@ public class MainActivity extends Activity {
     protected void onPause() {
         super.onPause();
         webView.onPause();
+        webView.pauseTimers();   // в фоне страница полностью спит, батарея не тратится
     }
 
     @Override
     protected void onResume() {
         super.onResume();
         webView.onResume();
+        webView.resumeTimers();
     }
 
     @Override

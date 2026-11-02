@@ -10,6 +10,7 @@ android {
         applicationId "com.example.samcalculator"
         minSdk 24
         targetSdk 34
+        resConfigs "en", "ru"
         // Номер сборки растёт сам (нужен телефону, чтобы принимать обновления)
         versionCode Integer.parseInt(System.getenv("GITHUB_RUN_NUMBER") ?: "1")
         versionName System.getenv("APP_VERSION") ?: "1.0.0"

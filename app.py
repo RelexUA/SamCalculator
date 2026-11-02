@@ -1,12 +1,19 @@
 import os
 import sys
 import time
+
+_T0 = time.monotonic()   # отсчёт времени запуска (для calculator_debug.log)
 import queue
 import shutil
 import tempfile
 import threading
 import traceback
 from multiprocessing import freeze_support
+
+# Известный сбой WebView2: окно целиком становится белым, когда Windows считает его
+# «закрытым» другими окнами. Отключаем этот расчёт до загрузки движка.
+os.environ.setdefault("WEBVIEW2_ADDITIONAL_BROWSER_ARGUMENTS",
+                      "--disable-features=CalculateNativeWinOcclusion")
 
 import webview
 
@@ -23,7 +30,7 @@ WINDOW_SIZES = {
 
 # ---------------------------------------------------------------- вспомогательное
 def resource_path(name):
-    """Путь к файлу и при обычном запуске, и внутри собранного exe (--onedir)."""
+    """Путь к файлу и при обычном запуске, и внутри собранного exe (--onefile)."""
     base = getattr(sys, "_MEIPASS", os.path.dirname(os.path.abspath(__file__)))
     return os.path.join(base, name)
 
@@ -75,6 +82,20 @@ def show_message(text):
         ctypes.windll.user32.MessageBoxW(0, text, WINDOW_TITLE, 0x10)
     except Exception:
         pass
+
+
+def startup_background():
+    """Цвет фона окна до загрузки страницы: по сохранённой теме.
+
+    Пока страница не нарисована, движок показывает фон окна. По умолчанию он белый,
+    отсюда белая вспышка при запуске. Берём цвет из настроек, чтобы вспышки не было."""
+    try:
+        import json
+        with open(data_path("settings.json"), "r", encoding="utf-8") as f:
+            theme = json.load(f).get("theme")
+        return "#f3f4f8" if theme == "light" else "#0c0c0e"
+    except Exception:
+        return "#0c0c0e"
 
 
 # ---------------------------------------------------------------- файлы данных
@@ -160,6 +181,23 @@ class Win32:
         # SWP_NOSIZE | SWP_NOMOVE | SWP_NOACTIVATE | SWP_ASYNCWINDOWPOS
         return bool(self.u.SetWindowPos(hwnd, after, 0, 0, 0, 0, 0x0001 | 0x0002 | 0x0010 | 0x4000))
 
+    def set_titlebar(self, theme):
+        """Красит заголовок окна под тему приложения (Windows 11; на Windows 10 ничего не делает)."""
+        hwnd = self.find_window()
+        if not hwnd:
+            return False
+        ctypes = self.ctypes
+        dwm = ctypes.WinDLL("dwmapi")
+        dwm.DwmSetWindowAttribute.argtypes = [self.wintypes.HWND, self.wintypes.DWORD,
+                                              ctypes.c_void_p, self.wintypes.DWORD]
+        dark = theme != "light"
+        bg = 0x000E0C0C if dark else 0x00F8F4F3      # цвета в порядке BGR
+        fg = 0x00ECE8E8 if dark else 0x00141411
+        for attr, value in ((20, 1 if dark else 0), (35, bg), (34, bg), (36, fg)):
+            v = ctypes.c_int(value)
+            dwm.DwmSetWindowAttribute(hwnd, attr, ctypes.byref(v), 4)
+        return True
+
     def set_icon(self, path):
         hwnd = self.find_window()
         if not hwnd:
@@ -241,16 +279,47 @@ class CalculatorAPI:
         ok = bool(w32 and w32.set_icon(path))
         trace("icon: done ok=%s" % ok)
 
-    def _do_resize(self, width, height):
+    def _do_titlebar(self, theme):
+        w32 = self._w32()
+        try:
+            ok = bool(w32 and w32.set_titlebar(theme))
+        except Exception:
+            log_error(traceback.format_exc())
+            ok = False
+        trace("titlebar: %s ok=%s" % (theme, ok))
+
+    def _do_resize(self, width, height, grow_only=False):
+        if grow_only:
+            # Окно только увеличивается до нужного размера: если пользователь уже
+            # растянул его больше, оставляем как есть
+            try:
+                width = max(width, int(self._window.width))
+                height = max(height, int(self._window.height))
+                if width == int(self._window.width) and height == int(self._window.height):
+                    return
+            except Exception:
+                pass
         trace("resize: start %sx%s" % (width, height))
         self._window.resize(width, height)
         trace("resize: done")
+        self._repaint()
+
+    def _repaint(self):
+        """Просит страницу перерисоваться: после смены размера окна WebView2
+        иногда оставляет белый кадр, пока страница сама ничего не изменит."""
+        try:
+            self._window.evaluate_js(
+                "document.body.style.transform='translateZ(0)';"
+                "requestAnimationFrame(function(){document.body.style.transform='';});")
+        except Exception:
+            pass
 
     def _do_topmost(self, flag):
         trace("topmost: start %s" % flag)
         w32 = self._w32()
         ok = bool(w32 and w32.set_topmost(flag))
         trace("topmost: done ok=%s" % ok)
+        self._repaint()
 
     # --- вызывается со страницы ---------------------------------------------------
     def notify_ready(self):
@@ -258,18 +327,23 @@ class CalculatorAPI:
         if not self._ready.is_set():
             self._ready_at = time.monotonic()
             self._ready.set()
-            trace("page ready")
+            trace("page ready (%.2f s from launch)" % (time.monotonic() - _T0))
         return True
 
-    def set_window_size(self, mode, sci=False):
+    def set_window_size(self, mode, sci=False, preset=False):
         if self._window is None:
             return False
         key = ("horizontal" if mode == "horizontal" else "vertical", bool(sci))
-        if key == self._size_key:
+        if key == self._size_key and not preset:
             return True          # окно уже такого размера, ничего не делаем
         self._size_key = key
         width, height = WINDOW_SIZES[key]
-        self._enqueue(self._do_resize, width, height)
+        self._enqueue(self._do_resize, width, height, not preset)
+        return True
+
+    def set_titlebar(self, theme):
+        """Страница сообщает тему, заголовок окна перекрашивается под неё."""
+        self._enqueue(self._do_titlebar, "light" if theme == "light" else "dark")
         return True
 
     def set_on_top(self, flag):
@@ -279,6 +353,11 @@ class CalculatorAPI:
             return True
         self._topmost = flag
         self._enqueue(self._do_topmost, flag)
+        return True
+
+    def log_js(self, text):
+        """Ошибки JavaScript со страницы попадают в calculator_debug.log."""
+        trace("js: %s" % str(text)[:300])
         return True
 
     def load_settings(self):
@@ -316,7 +395,7 @@ def main():
     # Для каждого запуска отдельная временная папка браузерного движка.
     # Если прошлый запуск закрылся некорректно и оставил свою папку «занятой»,
     # новый запуск не будет об неё спотыкаться и зависать.
-    storage = tempfile.mkdtemp(prefix="samgcalc_")
+    storage = tempfile.mkdtemp(prefix="samcalc_")
 
     try:
         api = CalculatorAPI()
@@ -328,11 +407,12 @@ def main():
             width=width,
             height=height,
             resizable=True,
-            min_size=(320, 450),
+            min_size=(360, 500),
+            background_color=startup_background(),
         )
         api._window = window
         api.start_icon()
-        trace("webview.start")
+        trace("webview.start (%.2f s from launch)" % (time.monotonic() - _T0))
         webview.start(debug=False, storage_path=storage)
         trace("closed normally")
     except Exception:

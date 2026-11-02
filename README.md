@@ -1,79 +1,97 @@
-# One UI-style Calculator
+# SamCalculator
 
-Fully vibe-coded desktop calculator for Windows/Android created using Gemini and Claude without subscriptions, styled after Samsung Calculator, featuring dark and light themes, a scientific mode, a converter, history with notes, and custom backgrounds. Built with Python (pywebview) using a single HTML file for the interface, it works completely offline and sends nothing to the internet.
+A fast, clean calculator for **Windows** and **Android** with a modern phone-style look. Dark and light themes, scientific mode, unit converter, calculation history with notes, and your own background image. Written with Python (pywebview) around a single HTML interface. It works completely offline and sends nothing to the internet.
+
+> Fully vibe-coded with Gemini and Claude, without subscriptions.
 
 ## Features
 
 ### Calculator
-- Standard operations: addition, subtraction, multiplication, division, parentheses, sign toggle, decimal comma.
-- Samsung-style percentages (`100 + 10 %` = 110).
-- **Live Preview**: the result is displayed in gray beneath the input before pressing "=".
-- Custom expression parser without `eval`: safe and predictable. Division by zero and other errors display clear messages.
-- Vertical (phone) and horizontal layouts; the window resizes dynamically.
+- Basic operations, parentheses, sign toggle, decimal point.
+- Phone-style percentages (`100 + 10 %` = 110).
+- **Live preview**: the result appears under the number before you press "=".
+- **Cursor editing**: tap or drag across the number to move a cursor, then insert or delete digits anywhere in the expression.
+- Custom expression parser without `eval`: safe and predictable, with clear error messages (for example, division by zero).
+- Adjustable digit size for the number, the expression and the preview.
 
-### Scientific Mode
-- sin, cos, tan and inverse functions, ln, log, √, ∛, exponentiation `^`, square and cube, factorial, π, e, absolute value.
-- Degrees and radians toggle.
+### Scientific mode
+- sin, cos, tan and inverse functions, ln, log, √, ∛, power `^`, square and cube, factorial, π, e, absolute value.
+- Degrees and radians switch.
 
 ### History
-- Slides out from the side without blocking the workspace; clicking outside closes the panel.
-- Add custom notes to any entry.
-- Clicking an expression inserts it back into the calculator.
-- **Persistent storage between launches** (`history.json` file).
+- Slides out in portrait layout; permanent column in landscape layout.
+- Add a note to any entry, or delete a single entry (or clear everything).
+- Click an expression to put it back into the calculator.
+- Adjustable width: drag the divider in landscape layout, or use the slider for portrait layout.
+- Saved between launches.
 
 ### Converter
-- Multiple units categories, such as length and tips.
-- **Dates mode**: calculate the exact days, months, and years between two dates.
-- Convenient numeric keypad, semi-transparent background.
+- Length, temperature, weight, volume, data, speed, network speed (Mbit/s, MB/s and more), time, area and tips.
+- **Dates mode**: days, months and years between two dates.
+- Custom unit picker that matches the app design.
 
-### Appearance and Settings
-- Light and dark themes, custom accent color selection.
-- Russian and English interface (switchable in settings).
-- Custom background: choose any image from your computer.
-- Sliders for panel and button transparency, and background dimming.
-- Pin window on top.
-- Settings are saved automatically.
+### Appearance
+- Light and dark themes (or automatic), accent colour palette plus your own colour with an eyedropper.
+- Custom background image, kept at full quality.
+- Sliders for panel transparency, button transparency, panel blur, background dimming, icon size and digit size.
+- English and Russian interface.
 
-### Clipboard
-- Copy results or full calculations with a single click.
+### Windows
+- The layout adapts to any window size: it stays sharp, scales up on large monitors and shrinks without cutting anything off.
+- The layout switches between portrait and landscape by itself when you stretch the window (can be turned off).
+- Always-on-top option, window title bar that follows the app theme (Windows 11).
+- Settings and history are saved automatically.
 
-## Data Storage
+### Android
+- Signed release APK. Landscape layout turns on automatically when you rotate the phone.
+- Note field sits right above the keyboard; the Back button closes panels first.
+- Fullscreen mode around the camera cutout, icon size slider.
+- Optional app icon that follows the phone theme (light or dark).
 
-Located in `%APPDATA%\SamsungCalculator`:
-- `settings.json`: configuration, including the selected background image;
+## Data storage
+
+Windows keeps its files in `%APPDATA%\SamCalculator`:
+- `settings.json`: settings, including the selected background image;
 - `history.json`: calculation history and notes.
 
-You can delete these files to reset the app. Error logs (`calculator_error.log` and `calculator_debug.log`) are stored next to the executable (or in the temporary folder if write access is restricted).
+Delete these files to reset the app. Error logs (`calculator_error.log`, `calculator_debug.log`) are stored next to the program, or in the temporary folder if writing there is not allowed.
 
-## Installation for Users
+## Installation
 
-Download the installer SamCalculator1.1.exe for Windows 10/11 or SamCalculator.apk for Android from the **Releases** section. No Python or external libraries required: everything is bundled inside.
+- **Windows:** download the installer (`SamCalculatorSetup.exe`) from the **Releases** section and run it. No Python or other libraries are required: everything is bundled.
+- **Android:** download `SamCalculator.apk` from **Releases**, open it on your phone and allow installation from this source. Updates install over the previous version.
 
-Requires **Windows 10 or 11** and **Microsoft Edge WebView2 Runtime**. It is pre-installed on Windows 11 and modern Windows 10 builds. If the window fails to open, install it from the Microsoft website.
+Requirements for Windows: **Windows 10 or 11** and **Microsoft Edge WebView2 Runtime** (already included in Windows 11 and up-to-date Windows 10). If the window does not open, install WebView2 Runtime from Microsoft.
 
-## Building from Source
+> Windows SmartScreen may show an "unknown publisher" warning because the app is not code-signed. Click **More info → Run anyway**.
 
+## Building from source
+
+### Windows
 Requires Python 3.9+ and Windows.
 
 ```bat
 pip install pywebview pyinstaller
 pyinstaller --noconsole --onedir --clean --icon favicon.ico ^
-  --add-data "samscalculator.html;." --add-data "favicon.ico;." ^
-  --name SamsCalculator app.py
+  --add-data "samcalculator.html;." --add-data "favicon.ico;." ^
+  --name SamCalculator app.py
 ```
 
-Alternatively, simply run `build.bat`. The compiled executable will appear in the `dist` folder.
+Or just run `build.bat`. The program appears in `dist\SamCalculator`. To run without building: `python app.py`.
 
-To run without building: `python app.py`.
+### Android
+The project lives in the `android` folder (a thin native WebView wrapper around the same HTML file). The workflow `.github/workflows/android.yml` builds a signed release APK on GitHub; the signing key is taken from repository secrets.
 
-## Project Files
+## Project files
 
 | File | Purpose |
 |---|---|
-| `app.py` | Window management, data persistence, always-on-top toggle, icon |
-| `samscalculator.html` | Complete interface and calculation logic |
-| `favicon.ico` | Application icon |
-| `build.bat` | Exe build script |
+| `app.py` | Window, data storage, always-on-top, icon, title bar colour |
+| `samcalculator.html` | The whole interface and calculation logic (used on Windows and Android) |
+| `favicon.ico` | Windows icon |
+| `build.bat` | Windows build script |
+| `android/` | Android app project |
+| `.github/workflows/android.yml` | Automatic APK build |
 
 ## License
 
