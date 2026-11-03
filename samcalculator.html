@@ -2,7 +2,7 @@
 <html lang="ru">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     <title>SamCalculator</title>
     <style>
         /* ===== ТЕМЫ =====
@@ -854,7 +854,6 @@
         }
         .settings-panel * { touch-action: pan-y; }
         .settings-panel #cp-sv { touch-action: none; }
-        html, body { overflow-x: hidden; overscroll-behavior: none; }
 
         .settings-panel.open {
             transform: translateY(0);
@@ -4331,8 +4330,8 @@
         document.getElementById("panel-blur").addEventListener("input", function (e) {
             changeSetting("panelBlur", parseInt(e.target.value, 10));
         });
-        setupColorPicker();
-        setupConvPointer();
+        try { setupColorPicker(); } catch (e) {}
+        try { setupConvPointer(); } catch (e) {}
         document.querySelectorAll(".unit-select").forEach(enhanceSelect);
         const file = document.getElementById("bg-file");
         document.getElementById("bg-pick").onclick = function () { file.click(); };
