@@ -58,7 +58,7 @@ Delete these files to reset the app. Error logs (`calculator_error.log`, `calcul
 
 ## Installation
 
-- **Windows:** download the installer (`SamCalculatorSetup.exe`) from the **Releases** section and run it. No Python or other libraries are required: everything is bundled.
+- **Windows:** download the installer (`SamCalculator.exe`) from the **Releases** section and run it. No Python or other libraries are required: everything is bundled.
 - **Android:** download `SamCalculator.apk` from **Releases**, open it on your phone and allow installation from this source. Updates install over the previous version.
 
 Requirements for Windows: **Windows 10 or 11** and **Microsoft Edge WebView2 Runtime** (already included in Windows 11 and up-to-date Windows 10). If the window does not open, install WebView2 Runtime from Microsoft.
