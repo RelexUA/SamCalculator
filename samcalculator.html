@@ -2191,6 +2191,25 @@
                 apply(s);
             }
         }
+        // Основной экран: если из-за крупных значков, цифр или шрифта системы нижний ряд
+        // всё же не помещается, окно дополнительно уменьшается ровно настолько, чтобы влезло
+        if (!panel) {
+            for (let k = 0; k < 12; k++) {
+                let bottom = 0, right = 0;
+                const btns = calcEl.querySelectorAll(".keypad button, .sci-panel button");
+                for (let i = 0; i < btns.length; i++) {
+                    const b = btns[i];
+                    if (!b.offsetParent || b.closest(".converter-panel, .settings-panel, .history-panel")) continue;
+                    const r = b.getBoundingClientRect();
+                    if (r.bottom > bottom) bottom = r.bottom;
+                    if (r.right > right) right = r.right;
+                }
+                const need = Math.max(bottom / H, right / W);
+                if (need <= 1.002) break;
+                s = Math.max(0.4, s / Math.max(need, 1.01) * 0.99);
+                apply(s);
+            }
+        }
         placeSplitter();
     }
     document.documentElement.classList.add("fit");
@@ -2266,6 +2285,8 @@
     new MutationObserver(fitWindow).observe(settingsPanel, { attributes: true, attributeFilter: ["class"] });
     new MutationObserver(fitWindow).observe(converterPanel, { attributes: true, attributeFilter: ["class"] });
     setTimeout(fitWindow, 0);
+    setTimeout(fitWindow, 400);
+    if (document.fonts && document.fonts.ready) document.fonts.ready.then(fitWindow);
 
     // Внутри Android-приложения (обёртка WebView) помечаем страницу
     if (IS_ANDROID) document.documentElement.classList.add("android");
@@ -3922,6 +3943,7 @@
         set("--ui", (settings.uiScale / 100).toFixed(2));
         syncFullscreen(theme);
         syncSettingsUI();
+        if (typeof fitWindow === "function") setTimeout(fitWindow, 30);
     }
 
     // ====== Android: полный экран и отступы под вырез камеры ======
