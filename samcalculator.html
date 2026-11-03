@@ -2416,7 +2416,7 @@
             }
         }
         // Висящие в конце действия и названия функций ("2 + ", "sin(") отбрасываем
-        full = full.replace(/(?:[\s+−×÷^(]|sin⁻¹|cos⁻¹|tan⁻¹|sin|cos|tan|ln|log|√|∛|abs)+$/, "");
+        full = full.replace(/(?:e\^\(|10\^\(|[\s+−×÷^(]|sin⁻¹|cos⁻¹|tan⁻¹|sin|cos|tan|ln|log|√|∛|abs)+$/, "");
         if (full.trim() === "") return "";
         const opens = (full.match(/\(/g) || []).length - (full.match(/\)/g) || []).length;
         if (opens > 0) full += ")".repeat(opens);
@@ -2495,6 +2495,8 @@
                 cur = d;
             } else if (cur === "-0") {
                 cur = "-" + d;
+            } else if (/\de[+-]?\d/.test(cur)) {
+                // число в виде 3.3e-7: цифра в конце испортила бы порядок
             } else if (digitCount(cur) < MAX_DIGITS) {
                 cur += d;
             }
@@ -3069,20 +3071,34 @@
         let i = 0;
         const peek = () => tokens[i];
 
+        // Сложение и вычитание без накопления ошибки: 0,1 + 0,2 − 0,3 должно быть 0, а не 5,55e-17
+        function addSub(a, b) {
+            const r = a + b;
+            if (r !== 0 && Math.abs(r) < Math.max(Math.abs(a), Math.abs(b)) * 1e-14) return 0;
+            return r;
+        }
+
         function parseExpr() {
             let left = parseTerm();
             while (peek() === "+" || peek() === "-" || peek() === "−") {
                 const op = tokens[i++];
-                const right = parseTerm();
-                // "100 + 10%" означает "100 + 10% от 100"
-                const rv = right.pct ? left.v * right.v : right.v;
-                left = { v: op === "+" ? left.v + rv : left.v - rv, pct: false };
+                const sign = op === "+" ? 1 : -1;
+                const first = parseFactor();
+                if (first.pct) {
+                    // "10 + 25%" = 10 + 25% от 10 = 12,5. Это значение считается сразу,
+                    // и дальнейшее "× 5" относится ко всей сумме: (10 + 25%) × 5 = 62,5
+                    left = { v: addSub(left.v, sign * left.v * first.v), pct: false };
+                    if (peek() === "×" || peek() === "÷" || peek() === "*" || peek() === "/") left = parseTerm(left);
+                } else {
+                    const right = parseTerm(first);
+                    left = { v: addSub(left.v, sign * right.v), pct: false };
+                }
             }
             return left;
         }
 
-        function parseTerm() {
-            let left = parseFactor();
+        function parseTerm(first) {
+            let left = first || parseFactor();
             while (peek() === "×" || peek() === "÷" || peek() === "*" || peek() === "/") {
                 const op = tokens[i++];
                 const right = parseFactor();
