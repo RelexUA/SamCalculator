@@ -1,3 +1,5 @@
+<img width="2400" height="1120" alt="screenshots" src="https://github.com/user-attachments/assets/d2242095-3b97-4ff9-8990-e4b87d14ca61" />
+
 # SamCalculator
 
 A fast, clean calculator for **Windows** and **Android** with a modern phone-style look. Dark and light themes, scientific mode, unit converter, calculation history with notes, and your own background image. Written with Python (pywebview) around a single HTML interface. It works completely offline and sends nothing to the internet.
