@@ -2,7 +2,7 @@
 <html lang="ru">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0, user-scalable=no, viewport-fit=cover">
     <title>SamCalculator</title>
     <style>
         /* ===== ТЕМЫ =====
@@ -654,6 +654,7 @@
             min-height: 44px;
         }
 
+        .unit-value-box .copy-btn { min-height: 36px; min-width: 36px; }
         .unit-value-box {
             display: flex;
             align-items: center;
@@ -685,10 +686,14 @@
         .csel-btn {
             display: flex; align-items: center; justify-content: space-between; gap: 8px;
             min-width: 84px; padding: 6px 10px 6px 12px;
-            border: none; border-radius: 10px; outline: none; cursor: pointer;
-            background: var(--btn-func-bg); color: var(--text);
-            font: 600 16px/1.2 inherit; font-family: inherit;
+            border-radius: 10px; outline: none; cursor: pointer;
+            background: transparent; color: var(--text);
+            border: 1px solid color-mix(in srgb, var(--line-strong) 50%, transparent);
+            height: 36px; box-sizing: border-box;
+            font: 500 15px/1.2 inherit; font-family: inherit;
+            transition: background 0.15s;
         }
+        .csel-btn:hover, .csel.open .csel-btn { background: var(--btn-func-bg); }
         .csel-btn::after {
             content: ""; width: 6px; height: 6px; margin-top: -3px; opacity: 0.7;
             border-right: 2px solid currentColor; border-bottom: 2px solid currentColor;
@@ -715,6 +720,7 @@
             color: var(--text);
         }
 
+        #conv-val-1 { touch-action: none; cursor: text; }
         .unit-val {
             color: var(--display-main);
             font-size: 26px;
@@ -841,8 +847,14 @@
             padding: calc(12px + var(--sat)) calc(18px + var(--sar)) calc(20px + var(--sab)) calc(18px + var(--sal));
             transform: translateY(100%);
             visibility: hidden;
+            overflow-x: hidden;
+            touch-action: pan-y;
+            overscroll-behavior: contain;
             transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1), visibility 0s linear 0.3s;
         }
+        .settings-panel * { touch-action: pan-y; }
+        .settings-panel #cp-sv { touch-action: none; }
+        html, body { overflow-x: hidden; overscroll-behavior: none; }
 
         .settings-panel.open {
             transform: translateY(0);
@@ -3627,6 +3639,7 @@
         currentCategory = cat;
         timeMode = "units";
         convInputVal = "0";
+        convPos = null; convCaret = false;
         document.querySelectorAll(".cat-btn").forEach(function (b) {
             b.classList.toggle("active", b.dataset.cat === cat);
         });
@@ -3654,35 +3667,122 @@
         convertUnits();
     }
 
+    // Курсор в поле ввода конвертера: convPos - место между символами (null = в конце)
+    let convPos = null, convCaret = false;
+
+    function convMinPos() { return convInputVal.startsWith("-") ? 1 : 0; }
+    function convGetPos() {
+        const n = convInputVal.length;
+        const p = convPos === null ? n : Math.min(convPos, n);
+        return Math.max(convMinPos(), p);
+    }
+
+    function convNormalize(p) {
+        let neg = convInputVal.startsWith("-");
+        let body = neg ? convInputVal.slice(1) : convInputVal;
+        let lead = neg ? 1 : 0;
+        if (body.startsWith(".")) { body = "0" + body; p++; }
+        while (body.length > 1 && body[0] === "0" && body[1] !== ".") { body = body.slice(1); p--; }
+        if (body === "") { body = "0"; p = lead + 1; }
+        convInputVal = (neg ? "-" : "") + body;
+        convPos = Math.max(lead, Math.min(p, convInputVal.length));
+    }
+
     function convInput(ch) {
         if (datesActive()) return;
+        const p = convGetPos();
+        const v = convInputVal;
         if (ch === "," || ch === ".") {
-            if (convInputVal.includes(".")) return;
-            convInputVal += ".";
-        } else if (convInputVal === "0") {
-            convInputVal = ch;
-        } else if (convInputVal === "-0") {
-            convInputVal = "-" + ch;
-        } else if (digitCount(convInputVal) < 12) {
-            convInputVal += ch;
+            if (v.includes(".")) return;
+            convInputVal = v.slice(0, p) + "." + v.slice(p);
+            convNormalize(p + 1);
+        } else {
+            const atEnd0 = (v === "0" || v === "-0") && p === v.length;
+            if (atEnd0) {
+                convInputVal = v.slice(0, v.length - 1) + ch;
+                convNormalize(convInputVal.length);
+            } else {
+                if (digitCount(v) >= 12) return;
+                convInputVal = v.slice(0, p) + ch + v.slice(p);
+                convNormalize(p + 1);
+            }
         }
+        if (convPos >= convInputVal.length) convPos = null;
         convertUnits();
     }
 
     function convDel() {
         if (datesActive()) return;
-        if (convInputVal.length <= 1 || (convInputVal.length === 2 && convInputVal.startsWith("-"))) {
-            convInputVal = "0";
-        } else {
-            convInputVal = convInputVal.slice(0, -1);
-        }
+        const p = convGetPos();
+        if (p <= convMinPos()) return;
+        const v = convInputVal;
+        convInputVal = v.slice(0, p - 1) + v.slice(p);
+        convNormalize(p - 1);
+        if (convPos >= convInputVal.length) convPos = null;
         convertUnits();
     }
 
     function convToggleSign() {
         if (datesActive()) return;
-        convInputVal = convInputVal.startsWith("-") ? convInputVal.slice(1) : "-" + convInputVal;
+        const p = convGetPos();
+        if (convInputVal.startsWith("-")) { convInputVal = convInputVal.slice(1); convPos = p - 1; }
+        else { convInputVal = "-" + convInputVal; convPos = p + 1; }
+        if (convPos >= convInputVal.length) convPos = null;
         convertUnits();
+    }
+
+    function convMoveCaret(p) {
+        convCaret = true;
+        convPos = Math.max(convMinPos(), Math.min(p, convInputVal.length));
+        convertUnits();
+    }
+
+    function renderConvInput() {
+        const el = document.getElementById("conv-val-1");
+        if (!convCaret) { el.textContent = fmt(convInputVal); return; }
+        const t = convInputVal, p = convGetPos();
+        let html = "";
+        for (let i = 0; i <= t.length; i++) {
+            if (i === p) html += '<span class="caret"></span>';
+            if (i < t.length) html += '<span class="ch">' + esc(fmt(t[i])) + "</span>";
+        }
+        el.innerHTML = html;
+        const c = el.querySelector(".caret");
+        if (c) {
+            const r = c.getBoundingClientRect(), d = el.getBoundingClientRect();
+            if (r.right > d.right - 6) el.scrollLeft += r.right - d.right + 12;
+            else if (r.left < d.left + 6) el.scrollLeft -= d.left - r.left + 12;
+        }
+    }
+
+    function setupConvPointer() {
+        const el = document.getElementById("conv-val-1");
+        let dragging = false;
+        const posFromX = function (x) {
+            const spans = el.querySelectorAll(".ch");
+            if (!spans.length) return convInputVal.length;
+            for (let i = 0; i < spans.length; i++) {
+                const r = spans[i].getBoundingClientRect();
+                if (x < r.left + r.width / 2) return i;
+            }
+            return spans.length;
+        };
+        el.addEventListener("pointerdown", function (ev) {
+            if (ev.button > 0 || datesActive()) return;
+            if (!convCaret) { convCaret = true; convPos = null; convertUnits(); }
+            convMoveCaret(posFromX(ev.clientX));
+            dragging = true;
+            try { el.setPointerCapture(ev.pointerId); } catch (e) {}
+            ev.preventDefault();
+        });
+        el.addEventListener("pointermove", function (ev) {
+            if (!dragging) return;
+            const p = Math.max(convMinPos(), posFromX(ev.clientX));
+            if (p !== convGetPos()) convMoveCaret(p);
+        });
+        const stop = function () { dragging = false; };
+        el.addEventListener("pointerup", stop);
+        el.addEventListener("pointercancel", stop);
     }
 
     function formatConv(r, money) {
@@ -3693,7 +3793,7 @@
 
     function convertUnits() {
         const val = parseFloat(convInputVal) || 0;
-        document.getElementById("conv-val-1").textContent = fmt(convInputVal);
+        renderConvInput();
 
         const fromU = unitFrom.value;
         const toU = unitTo.value;
@@ -3778,13 +3878,9 @@
         return settings.theme === "light" ? "light" : "dark";
     }
 
-    function applyAppearance() {
-        applyHist();
+    // Цвет акцента и производные от него оттенки (быстро: только переменные CSS)
+    function applyAccentVars(theme) {
         const root = document.documentElement;
-        const theme = resolvedTheme();
-        root.setAttribute("data-theme", theme);
-
-        // Цвет акцента и производные от него оттенки
         const hex = settings.accent;
         const c = hexToHsl(hex);
         const set = function (k, v) { root.style.setProperty(k, v); };
@@ -3795,6 +3891,17 @@
         set("--btn-func-color", "hsl(" + c.h + " " + Math.min(100, c.s + 6) + "% " + funcL + "%)");
         const lum = 0.299 * parseInt(hex.slice(1, 3), 16) + 0.587 * parseInt(hex.slice(3, 5), 16) + 0.114 * parseInt(hex.slice(5, 7), 16);
         set("--on-accent", lum > 165 ? "#111114" : "#ffffff");
+
+    }
+
+    function applyAppearance() {
+        applyHist();
+        const root = document.documentElement;
+        const theme = resolvedTheme();
+        root.setAttribute("data-theme", theme);
+
+        const set = function (k, v) { root.style.setProperty(k, v); };
+        applyAccentVars(theme);
 
         // Свой фон с затемнением под цвет темы
         if (settings.bg) {
@@ -4052,7 +4159,20 @@
             hue.value = Math.round(H);
             prev.style.background = c;
             if (document.activeElement !== hex) hex.value = c;
-            if (apply) changeSetting("accent", c);
+            if (apply === true) changeSetting("accent", c);
+            else if (apply === "live") { pendingLive = c; if (!liveRaf) liveRaf = requestAnimationFrame(flushLive); }
+        }
+        let pendingLive = null, liveRaf = 0;
+        function flushLive() {
+            liveRaf = 0;
+            if (!pendingLive) return;
+            settings.accent = pendingLive; pendingLive = null;
+            applyAccentVars(resolvedTheme());
+        }
+        function commitLive() {
+            if (liveRaf) { cancelAnimationFrame(liveRaf); liveRaf = 0; }
+            pendingLive = null;
+            changeSetting("accent", hsv2hex(H, S, V));
         }
         function openCp() {
             const v = hex2hsv(settings.accent);
@@ -4081,14 +4201,15 @@
             const r = sv.getBoundingClientRect();
             S = Math.min(1, Math.max(0, (e.clientX - r.left) / r.width));
             V = 1 - Math.min(1, Math.max(0, (e.clientY - r.top) / r.height));
-            paint(true);
+            paint("live");
         }
         let drag = false;
         sv.addEventListener("pointerdown", function (e) { drag = true; try { sv.setPointerCapture(e.pointerId); } catch (x) {} svMove(e); e.preventDefault(); });
         sv.addEventListener("pointermove", function (e) { if (drag) svMove(e); });
-        sv.addEventListener("pointerup", function () { drag = false; });
-        sv.addEventListener("pointercancel", function () { drag = false; });
-        hue.addEventListener("input", function () { H = parseInt(hue.value, 10); paint(true); });
+        sv.addEventListener("pointerup", function () { if (drag) { drag = false; commitLive(); } });
+        sv.addEventListener("pointercancel", function () { if (drag) { drag = false; commitLive(); } });
+        hue.addEventListener("input", function () { H = parseInt(hue.value, 10); paint("live"); });
+        hue.addEventListener("change", commitLive);
         hex.addEventListener("input", function () {
             const v = hex2hsv(hex.value);
             if (v) { H = v[0]; S = v[1]; V = v[2]; paint(true); }
@@ -4211,6 +4332,7 @@
             changeSetting("panelBlur", parseInt(e.target.value, 10));
         });
         setupColorPicker();
+        setupConvPointer();
         document.querySelectorAll(".unit-select").forEach(enhanceSelect);
         const file = document.getElementById("bg-file");
         document.getElementById("bg-pick").onclick = function () { file.click(); };
@@ -4310,6 +4432,10 @@
             else if (k === "." || k === ",") convInput(".");
             else if (k === "-") convToggleSign();
             else if (k === "Backspace") convDel();
+            else if (k === "ArrowLeft") convMoveCaret(convGetPos() - 1);
+            else if (k === "ArrowRight") convMoveCaret(convGetPos() + 1);
+            else if (k === "Home") convMoveCaret(0);
+            else if (k === "End") convMoveCaret(convInputVal.length);
             else if (k === "Escape") converterPanel.classList.remove("open");
             else handled = false;
             if (handled) e.preventDefault();

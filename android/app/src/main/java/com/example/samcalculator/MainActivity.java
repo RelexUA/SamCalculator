@@ -64,6 +64,7 @@ public class MainActivity extends Activity {
         s.setAllowFileAccessFromFileURLs(false);
         s.setAllowUniversalAccessFromFileURLs(false);
         s.setSupportZoom(false);
+        s.setDisplayZoomControls(false);
         s.setBuiltInZoomControls(false);
         s.setTextZoom(100);                      // системный размер шрифта не ломает вёрстку
         s.setUserAgentString(s.getUserAgentString() + " SamCalcApp");
