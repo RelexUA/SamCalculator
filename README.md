@@ -5,7 +5,7 @@
 A fast, clean calculator for **Windows** and **Android** with a modern phone-style look. Dark and light themes, scientific mode, unit converter, calculation history with notes, and your own background image. Written with Python (pywebview) around a single HTML interface. It works completely offline and sends nothing to the internet.
 
 > Fully vibe-coded with Gemini and Claude, without subscriptions.
-
+https://www.youtube.com/watch?v=BqX-5_9hJFE
 ## Features
 
 ### Calculator
